@@ -11,7 +11,8 @@ def show_navigation_menu():
     # 使用原生 st.page_link 創建頁面連結
     st.sidebar.page_link("app.py", label="首頁", icon="🏠")
     st.sidebar.page_link("pages/market_overview.py", label="市場總覽", icon="📊")
-    st.sidebar.page_link("pages/technical_analysis.py", label="技術分析", icon="📈") 
+    st.sidebar.page_link("pages/technical_analysis.py", label="技術分析", icon="📈")
+    st.sidebar.page_link("pages/cis_2560.py", label="CIS + 2560 戰法", icon="🎯")
     st.sidebar.page_link("pages/financial_analysis.py", label="財務分析", icon="💰")
     st.sidebar.page_link("pages/portfolio.py", label="投資組合", icon="📱")
     

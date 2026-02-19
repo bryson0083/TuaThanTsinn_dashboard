@@ -13,7 +13,8 @@ dependencies = [
     "pandas>=2.3.0",
     "plotly>=5.17.0",
     "pydantic>=2.11.7",
-    "streamlit>=1.46.0",
+    "streamlit>=1.53.0",
+    "streamlit-lightweight-charts>=0.7.20",
     "ta-lib>=0.6.4",
     "watchdog>=6.0.0",
 ]

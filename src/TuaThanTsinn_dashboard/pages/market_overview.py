@@ -2,22 +2,29 @@
 市場總覽頁面
 """
 
+import os
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-import sys
-import os
 
-# 添加父目錄到路徑以導入共用模組
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 導入自建公用模組 - 載入時會自動初始化環境設定
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+from TuaThanTsinn_dashboard.proj_util_pkg.settings import settings
+
 from menu import show_navigation_menu
+
 
 def show_market_overview():
     """顯示市場總覽"""
     st.title("📊 市場總覽")
     st.markdown("### 台股市場即時概況")
     
+    st.write(os.environ.get("database_path"))
+
     # 市場指數概況
     st.subheader("🏛️ 主要指數")
     col1, col2, col3 = st.columns(3)
@@ -111,7 +118,7 @@ def show_top_stocks():
         '成交量(張)': '{:,}'
     })
     
-    st.dataframe(styled_df, use_container_width=True)
+    st.dataframe(styled_df, width="stretch")
 
 def show_market_charts():
     """顯示市場圖表"""
