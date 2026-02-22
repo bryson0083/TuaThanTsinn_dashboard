@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
+from .technical import TechnicalIndicators
+
 
 class CIS2560Indicators:
     """CIS + 2560 戰法指標計算器"""
@@ -16,21 +18,40 @@ class CIS2560Indicators:
     # --- 技術指標計算 ---
 
     @staticmethod
-    def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    def compute_indicators(
+        df: pd.DataFrame,
+        control_ma_period: int = 25,
+        atr_period: int = 14,
+        atr_multiplier: float = 2.0
+    ) -> pd.DataFrame:
         """
         計算 CIS + 2560 所需的所有技術指標
 
         Args:
             df: 包含 'close', 'open', 'high', 'low', 'vol' 欄位的 DataFrame
+            control_ma_period: 控盤均線週期（預設 25，作為 ATR 移動停損的計算基礎）
+            atr_period: ATR 計算週期（預設 14）
+            atr_multiplier: ATR 移動停損乘數（預設 2.0）
 
         Returns:
-            加入 SMA5, SMA25, Vol_SMA5, Vol_SMA60 欄位的 DataFrame
+            加入 SMA5, SMA25, Vol_SMA5, Vol_SMA60, control_ma, atr, atr_trailing_stop 欄位的 DataFrame
         """
         result = df.copy()
         result['SMA5'] = result['close'].rolling(window=5).mean()
         result['SMA25'] = result['close'].rolling(window=25).mean()
         result['Vol_SMA5'] = result['vol'].rolling(window=5).mean()
         result['Vol_SMA60'] = result['vol'].rolling(window=60).mean()
+
+        # 控盤均線（ATR 移動停損的計算基礎）
+        result['control_ma'] = result['close'].rolling(window=control_ma_period).mean()
+
+        # ATR 與棘輪式移動停損（基於控盤均線）
+        result['atr'] = TechnicalIndicators.atr(
+            result['high'], result['low'], result['close'], period=atr_period
+        )
+        result['atr_trailing_stop'] = TechnicalIndicators.atr_trailing_stop(
+            result['control_ma'], result['atr'], multiplier=atr_multiplier
+        )
         return result
 
     # --- 輔助判斷函式 ---

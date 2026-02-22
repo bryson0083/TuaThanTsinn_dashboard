@@ -91,4 +91,52 @@ class TechnicalIndicators:
             'upper': upper_band,
             'middle': rolling_mean,
             'lower': lower_band
-        } 
+        }
+
+    @staticmethod
+    def atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
+        """
+        計算平均真實波動區間 (ATR)
+
+        Args:
+            high: 最高價 Series
+            low: 最低價 Series
+            close: 收盤價 Series
+            period: 計算週期（預設 14）
+
+        Returns:
+            ATR 指標 Series
+        """
+        prev_close = close.shift(1)
+        tr = pd.concat([
+            high - low,
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ], axis=1).max(axis=1)
+        return tr.rolling(window=period).mean()
+
+    @staticmethod
+    def atr_trailing_stop(close: pd.Series, atr: pd.Series, multiplier: float = 2.0) -> pd.Series:
+        """
+        計算棘輪式 ATR 移動停損（停損價只會往上調，不會往下）
+
+        Args:
+            close: 收盤價 Series
+            atr: ATR 指標 Series
+            multiplier: ATR 乘數（預設 2.0）
+
+        Returns:
+            移動停損價 Series
+        """
+        candidate_stop = close - atr * multiplier
+        trailing_stop = pd.Series(np.nan, index=close.index)
+        for i in range(len(close)):
+            if pd.isna(candidate_stop.iloc[i]):
+                continue
+            if i == 0 or pd.isna(trailing_stop.iloc[i - 1]):
+                trailing_stop.iloc[i] = candidate_stop.iloc[i]
+            elif close.iloc[i] < trailing_stop.iloc[i - 1]:
+                trailing_stop.iloc[i] = candidate_stop.iloc[i]
+            else:
+                trailing_stop.iloc[i] = max(trailing_stop.iloc[i - 1], candidate_stop.iloc[i])
+        return trailing_stop

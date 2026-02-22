@@ -147,6 +147,28 @@ def create_cis_2560_chart(
         row=1, col=1
     )
 
+    # 控盤均線（灰色）
+    control_ma_valid = plot_df[plot_df['control_ma'].notna()]
+    fig.add_trace(
+        go.Scatter(
+            x=control_ma_valid['Date'], y=control_ma_valid['control_ma'],
+            mode='lines', name='控盤MA',
+            line=dict(color='#9E9E9E', width=1.5)
+        ),
+        row=1, col=1
+    )
+
+    # ATR 移動停損線（粉紅色虛線）
+    atr_valid = plot_df[plot_df['atr_trailing_stop'].notna()]
+    fig.add_trace(
+        go.Scatter(
+            x=atr_valid['Date'], y=atr_valid['atr_trailing_stop'],
+            mode='lines', name='ATR停損',
+            line=dict(color='#E91E63', width=1.5, dash='dot')
+        ),
+        row=1, col=1
+    )
+
     # --- 第 2 列：成交量 ---
     vol_colors = [
         '#ef5350' if c >= o else '#26a69a'
@@ -254,7 +276,7 @@ def create_cis_2560_chart(
 # ===== 頁面 UI 函式 =====
 
 def show_stock_input(stock_list_df: pd.DataFrame):
-    """顯示股票輸入區域，回傳 (stock_id, stock_name, display_days, enable_vol_confirm)"""
+    """顯示股票輸入區域，回傳 (stock_id, stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier)"""
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
@@ -275,7 +297,19 @@ def show_stock_input(stock_list_df: pd.DataFrame):
     with col4:
         enable_vol_confirm = st.checkbox("啟用 2560 量能確認", value=True)
 
-    return stock_id.strip(), stock_name, display_days, enable_vol_confirm
+    # ATR 移動停損參數
+    col_atr1, col_atr2, col_atr3, _ = st.columns([1, 1, 1, 1])
+
+    with col_atr1:
+        control_ma_period = st.number_input("控盤均線", min_value=5, max_value=120, value=25, step=1)
+
+    with col_atr2:
+        atr_period = st.number_input("ATR 週期", min_value=5, max_value=50, value=14, step=1)
+
+    with col_atr3:
+        atr_multiplier = st.number_input("ATR 乘數", min_value=0.5, max_value=5.0, value=2.0, step=0.1)
+
+    return stock_id.strip(), stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier
 
 
 def show_signal_summary(signal_df: pd.DataFrame):
@@ -351,7 +385,7 @@ def main():
     stock_list_df = get_stock_list()
 
     # 使用者輸入
-    stock_id, stock_name, display_days, enable_vol_confirm = show_stock_input(stock_list_df)
+    stock_id, stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier = show_stock_input(stock_list_df)
 
     if not stock_id:
         st.warning("請輸入股票代碼")
@@ -370,7 +404,10 @@ def main():
         return
 
     # 計算指標
-    df_with_indicators = CIS2560Indicators.compute_indicators(price_df)
+    df_with_indicators = CIS2560Indicators.compute_indicators(
+        price_df, control_ma_period=control_ma_period,
+        atr_period=atr_period, atr_multiplier=atr_multiplier
+    )
 
     # 產生信號
     df_with_signals = CIS2560Indicators.generate_signals(
