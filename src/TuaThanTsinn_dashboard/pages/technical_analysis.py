@@ -289,11 +289,14 @@ def create_candlestick_chart(df: pd.DataFrame, title: str, show_ma: bool, show_r
         )
     )
 
-    # 設定 X 軸（隱藏週末間隙、日期格式、格線）
+    # 計算所有非交易日（週末 + 假期），讓 K 線連續不留空白
+    all_dates = pd.date_range(start=df['date'].min(), end=df['date'].max(), freq='D')
+    trading_dates = set(pd.to_datetime(df['date']).dt.normalize())
+    non_trading_dates = [d for d in all_dates if d not in trading_dates]
+
+    # 設定 X 軸（隱藏非交易日間隙、日期格式、格線）
     fig.update_xaxes(
-        rangebreaks=[
-            dict(bounds=["sat", "mon"])
-        ],
+        rangebreaks=[dict(values=non_trading_dates)],
         tickformat="%m/%d",  # 日期格式：月/日
         dtick=7 * 24 * 60 * 60 * 1000,  # 每週顯示一次刻度（毫秒）
         hoverformat="%Y-%m-%d",  # hover 時顯示完整日期

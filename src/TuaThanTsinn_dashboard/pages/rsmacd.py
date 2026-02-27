@@ -340,8 +340,13 @@ def create_rsmacd_chart(
         ),
     )
 
+    # 計算所有非交易日（週末 + 假期），讓 K 線連續不留空白
+    all_dates = pd.date_range(start=plot_df['Date'].min(), end=plot_df['Date'].max(), freq='D')
+    trading_dates = set(plot_df['Date'].dt.normalize())
+    non_trading_dates = [d for d in all_dates if d not in trading_dates]
+
     fig.update_xaxes(
-        rangebreaks=[dict(bounds=["sat", "mon"])],
+        rangebreaks=[dict(values=non_trading_dates)],
         tickformat="%m/%d",
         dtick=7 * 24 * 60 * 60 * 1000,
         hoverformat="%Y-%m-%d",
