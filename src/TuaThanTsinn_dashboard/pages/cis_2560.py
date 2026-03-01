@@ -306,7 +306,7 @@ def show_stock_input(stock_list_df: pd.DataFrame):
     col_atr1, col_atr2, col_atr3, _ = st.columns([1, 1, 1, 1])
 
     with col_atr1:
-        control_ma_period = st.number_input("控盤均線", min_value=5, max_value=120, value=25, step=1)
+        control_ma_period = st.number_input("控盤均線", min_value=5, max_value=120, value=5, step=1)
 
     with col_atr2:
         atr_period = st.number_input("ATR 週期", min_value=5, max_value=50, value=14, step=1)
