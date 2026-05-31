@@ -43,22 +43,29 @@ def get_stock_list() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
-def get_stock_price(symbol: str, days: int = 500) -> pd.DataFrame:
+def get_stock_price(symbol: str, days: int = 500, use_adj: bool = False) -> pd.DataFrame:
     """
     從 DuckDB 讀取指定股票的歷史價格資料
 
     Args:
         symbol: 股票代碼
         days: 取最近 N 天的資料（預設 500 天，確保 60 日均線有足夠數據）
+        use_adj: 是否改用還原股價（adj_open/adj_high/adj_low/adj_close），
+                 為 True 時以別名映射為 open/high/low/close，下游邏輯無需更動
     """
     db_path = os.environ.get('duckdb_file_path')
     if not db_path:
         return pd.DataFrame()
 
+    if use_adj:
+        price_cols = "adj_open AS open, adj_high AS high, adj_low AS low, adj_close AS close"
+    else:
+        price_cols = "open, high, low, close"
+
     conn = duckdb.connect(db_path, read_only=True)
     try:
-        df = conn.execute("""
-            SELECT Date, open, high, low, close, vol
+        df = conn.execute(f"""
+            SELECT Date, {price_cols}, vol
             FROM tw_stock_daily_txn
             WHERE symbol = ?
             ORDER BY Date DESC
@@ -281,7 +288,7 @@ def create_cis_2560_chart(
 # ===== 頁面 UI 函式 =====
 
 def show_stock_input(stock_list_df: pd.DataFrame):
-    """顯示股票輸入區域，回傳 (stock_id, stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier)"""
+    """顯示股票輸入區域，回傳 (stock_id, stock_name, display_days, enable_vol_confirm, use_adj_price, control_ma_period, atr_period, atr_multiplier)"""
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
@@ -301,6 +308,7 @@ def show_stock_input(stock_list_df: pd.DataFrame):
 
     with col4:
         enable_vol_confirm = st.checkbox("啟用 2560 量能確認", value=True)
+        use_adj_price = st.checkbox("使用還原股價", value=False)
 
     # ATR 移動停損參數
     col_atr1, col_atr2, col_atr3, _ = st.columns([1, 1, 1, 1])
@@ -314,7 +322,7 @@ def show_stock_input(stock_list_df: pd.DataFrame):
     with col_atr3:
         atr_multiplier = st.number_input("ATR 乘數", min_value=0.5, max_value=5.0, value=2.0, step=0.1)
 
-    return stock_id.strip(), stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier
+    return stock_id.strip(), stock_name, display_days, enable_vol_confirm, use_adj_price, control_ma_period, atr_period, atr_multiplier
 
 
 def show_signal_summary(signal_df: pd.DataFrame):
@@ -390,7 +398,7 @@ def main():
     stock_list_df = get_stock_list()
 
     # 使用者輸入
-    stock_id, stock_name, display_days, enable_vol_confirm, control_ma_period, atr_period, atr_multiplier = show_stock_input(stock_list_df)
+    stock_id, stock_name, display_days, enable_vol_confirm, use_adj_price, control_ma_period, atr_period, atr_multiplier = show_stock_input(stock_list_df)
 
     if not stock_id:
         st.warning("請輸入股票代碼")
@@ -402,7 +410,7 @@ def main():
 
     # 取得價格資料（多抓 80 天作為均線計算緩衝）
     fetch_days = display_days + 80
-    price_df = get_stock_price(stock_id, fetch_days)
+    price_df = get_stock_price(stock_id, fetch_days, use_adj=use_adj_price)
 
     if price_df.empty:
         st.error(f"無法取得 {stock_id} 的價格資料")
